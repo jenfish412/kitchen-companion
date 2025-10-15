@@ -17,7 +17,7 @@ src/
 │   ├── Navigation.tsx         # Fixed header navigation with brand
 │   ├── HomePage.tsx          # Landing page with feature cards
 │   ├── RecipeGenerator.tsx   # AI recipe generation with ingredients input
-│   ├── IngredientSubstitute.tsx # Ingredient substitution lookup
+│   ├── SubstituteFinder.tsx # Ingredient substitution lookup
 │   ├── MealPlanner.tsx       # Weekly meal planning interface
 │   ├── figma/                # Figma-generated components
 │   │   └── ImageWithFallback.tsx # Error-resistant image component
