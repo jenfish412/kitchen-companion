@@ -10,6 +10,8 @@ import {
 } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Search, Loader2 } from "lucide-react";
+import React from "react";
+import { apiService } from "../services/api";
 
 interface Substitute {
   name: string;
@@ -23,134 +25,64 @@ interface SubstituteResult {
   substitutes: Substitute[];
 }
 
+// Helper function to convert API response to component format
+const convertApiResponseToSubstitutes = (substitutions: string[], notes: string): Substitute[] => {
+  return substitutions.map((sub, index) => {
+    // Extract name and ratio from the substitution string
+    const parts = sub.split(' (');
+    const name = parts[0].split(' per ')[0].split(' + ')[0].replace(/^\d+\/?\d*\s*(cup|teaspoon|tablespoon|amount)\s+of\s+/i, '').replace(/Equal amount of /i, '').trim();
+    const ratio = sub;
+    
+    // Assign confidence based on position (first few are usually better)
+    const confidence: "high" | "medium" | "low" = index < 2 ? "high" : index < 4 ? "medium" : "low";
+    
+    return {
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      ratio,
+      notes: notes,
+      confidence
+    };
+  });
+};
+
 export function SubstituteFinder() {
   const [searchIngredient, setSearchIngredient] = useState("");
   const [result, setResult] = useState<SubstituteResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const searchSubstitutes = async () => {
     if (!searchIngredient.trim()) return;
 
     setIsSearching(true);
+    setError(null);
+    setResult(null);
 
-    // Mock API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      console.log(`Searching substitutes for: ${searchIngredient}`);
+      
+      const response = await apiService.getIngredientSubstitutions({
+        ingredient: searchIngredient.trim()
+      });
 
-    // Mock substitute data
-    const mockSubstitutes: Record<string, Substitute[]> = {
-      butter: [
-        {
-          name: "Vegetable oil",
-          ratio: "3/4 cup oil for 1 cup butter",
-          notes: "Best for baking, reduces flavor slightly",
-          confidence: "high",
-        },
-        {
-          name: "Applesauce",
-          ratio: "1/2 cup for 1 cup butter",
-          notes: "Great for moist baked goods, reduces calories",
-          confidence: "high",
-        },
-        {
-          name: "Greek yogurt",
-          ratio: "1/2 cup for 1 cup butter",
-          notes: "Adds protein, works well in muffins and cakes",
-          confidence: "medium",
-        },
-      ],
-      eggs: [
-        {
-          name: "Flax eggs",
-          ratio: "1 tbsp ground flaxseed + 3 tbsp water per egg",
-          notes: "Let sit for 5 minutes to thicken",
-          confidence: "high",
-        },
-        {
-          name: "Applesauce",
-          ratio: "1/4 cup per egg",
-          notes: "Works best in moist baked goods",
-          confidence: "medium",
-        },
-        {
-          name: "Banana",
-          ratio: "1/4 cup mashed banana per egg",
-          notes: "Adds sweetness and moisture",
-          confidence: "medium",
-        },
-      ],
-      milk: [
-        {
-          name: "Almond milk",
-          ratio: "1:1 ratio",
-          notes: "Use unsweetened for best results",
-          confidence: "high",
-        },
-        {
-          name: "Oat milk",
-          ratio: "1:1 ratio",
-          notes: "Creamy texture, great for baking",
-          confidence: "high",
-        },
-        {
-          name: "Water + butter",
-          ratio: "1 cup water + 1 tbsp butter",
-          notes: "Emergency substitute only",
-          confidence: "low",
-        },
-      ],
-      flour: [
-        {
-          name: "Almond flour",
-          ratio: "1:1 ratio",
-          notes: "Gluten-free, adds nutty flavor",
-          confidence: "medium",
-        },
-        {
-          name: "Oat flour",
-          ratio: "1:1 ratio",
-          notes: "Can make by grinding oats",
-          confidence: "medium",
-        },
-        {
-          name: "Coconut flour",
-          ratio: "1/4 cup coconut flour for 1 cup regular flour",
-          notes: "Very absorbent, reduce liquid in recipe",
-          confidence: "medium",
-        },
-      ],
-    };
-
-    const ingredient = searchIngredient.toLowerCase().trim();
-    let substitutes = mockSubstitutes[ingredient] || [];
-
-    // If exact match not found, try to find partial matches
-    if (substitutes.length === 0) {
-      const partialMatch = Object.keys(mockSubstitutes).find(
-        (key) => key.includes(ingredient) || ingredient.includes(key)
-      );
-      if (partialMatch) {
-        substitutes = mockSubstitutes[partialMatch];
+      if (response.success) {
+        console.log("Substitutions found:", response);
+        
+        const substitutes = convertApiResponseToSubstitutes(response.substitutions, response.notes);
+        setResult({
+          ingredient: response.originalIngredient,
+          substitutes
+        });
+      } else {
+        setError('Failed to find substitutions');
       }
+      
+    } catch (error) {
+      console.error("Failed to find substitution due to error:", error);
+      setError(error instanceof Error ? error.message : 'Failed to find substitutions');
+    } finally {
+      setIsSearching(false);
     }
-
-    // If still no matches, provide generic substitutes
-    if (substitutes.length === 0) {
-      substitutes = [
-        {
-          name: "Generic substitute",
-          ratio: "1:1 ratio",
-          notes: "Check online cooking resources for specific substitutions",
-          confidence: "low",
-        },
-      ];
-    }
-
-    setResult({
-      ingredient: searchIngredient,
-      substitutes,
-    });
-
-    setIsSearching(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

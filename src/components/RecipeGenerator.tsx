@@ -1,24 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Loader2, Plus, X, Sparkles } from "lucide-react";
-
-interface Recipe {
-  name: string;
-  description: string;
-  prepTime: string;
-  servings: number;
-  ingredients: string[];
-  instructions: string[];
-}
+import { Loader2, Plus, X, Sparkles, AlertCircle, Clock } from "lucide-react";
+import { apiService, type Recipe, type DailyUsageResponse } from "../services/api";
+import React from "react";
 
 export function RecipeGenerator() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dailyUsage, setDailyUsage] = useState<DailyUsageResponse['usage'] | null>(null);
+  const [isLoadingUsage, setIsLoadingUsage] = useState(true);
+
+  // Check daily usage on component mount
+  useEffect(() => {
+    checkUsage();
+  }, []);
+
+  const checkUsage = async () => {
+    try {
+      setIsLoadingUsage(true);
+      const response = await apiService.checkDailyUsage();
+      setDailyUsage(response.usage);
+    } catch (error) {
+      console.error('Failed to check daily usage:', error);
+    } finally {
+      setIsLoadingUsage(false);
+    }
+  };
 
   const addIngredient = () => {
     if (currentIngredient.trim() && !ingredients.includes(currentIngredient.trim())) {
@@ -33,44 +46,36 @@ export function RecipeGenerator() {
 
   const generateRecipe = async () => {
     setIsGenerating(true);
+    setError(null);
     
-    // Mock AI recipe generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const mockRecipes = [
-      {
-        name: "Mediterranean Herb Bowl",
-        description: "A fresh and flavorful bowl combining your ingredients with Mediterranean flair",
-        prepTime: "25 minutes",
+    try {
+      console.log('🤖 Calling OpenAI API to generate recipe with ingredients:', ingredients);
+      
+      const response = await apiService.testOpenAIRecipe({
+        ingredients,
         servings: 4,
-        ingredients: [...ingredients, "olive oil", "lemon juice", "salt", "black pepper"],
-        instructions: [
-          "Prepare all ingredients by washing and chopping as needed",
-          "Heat olive oil in a large pan over medium heat",
-          "Add your main ingredients and sauté for 5-7 minutes",
-          "Season with salt, pepper, and lemon juice",
-          "Serve warm in bowls with a drizzle of olive oil"
-        ]
-      },
-      {
-        name: "Quick Stir-Fry Delight",
-        description: "A quick and nutritious stir-fry using your available ingredients",
-        prepTime: "15 minutes",
-        servings: 3,
-        ingredients: [...ingredients, "soy sauce", "garlic", "ginger", "sesame oil"],
-        instructions: [
-          "Heat a wok or large skillet over high heat",
-          "Add oil and let it get hot",
-          "Add your ingredients in order of cooking time needed",
-          "Stir-fry for 3-5 minutes until tender-crisp",
-          "Add seasonings and toss to combine"
-        ]
+        mealType: 'any'
+      });
+
+      console.log('✅ OpenAI recipe generated successfully:', response);
+      setGeneratedRecipe(response.recipe);
+      
+      // Always refresh usage info after successful generation
+      await checkUsage();
+      
+    } catch (error) {
+      console.error('❌ Failed to generate OpenAI recipe:', error);
+      
+      // Check if it's a daily limit error
+      if (error instanceof Error && error.message.includes('Daily AI recipe limit reached')) {
+        setError('Daily limit reached! You can generate 5 AI recipes per day. This limit helps manage API costs for this portfolio demo. Try the ingredient substitution finder or check back tomorrow!');
+        await checkUsage(); // Refresh usage to show current status
+      } else {
+        setError(error instanceof Error ? error.message : 'Failed to generate recipe');
       }
-    ];
-    
-    const randomRecipe = mockRecipes[Math.floor(Math.random() * mockRecipes.length)];
-    setGeneratedRecipe(randomRecipe);
-    setIsGenerating(false);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -78,6 +83,9 @@ export function RecipeGenerator() {
       addIngredient();
     }
   };
+
+  const canGenerate = dailyUsage?.canGenerate !== false && ingredients.length >= 4;
+  const isAtLimit = dailyUsage && !dailyUsage.canGenerate;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 p-6">
@@ -89,7 +97,52 @@ export function RecipeGenerator() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        {/* Daily Usage Info */}
+        {!isLoadingUsage && dailyUsage && (
+          <Card className="mb-6">
+            <CardContent className="pt-6 pb-6 px-6 [&:last-child]:pb-[1.375rem]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">Daily AI Recipe Usage</span>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${isAtLimit ? 'text-red-600' : 'text-green-600'}`}>
+                      {dailyUsage.remaining} of {dailyUsage.max} remaining
+                    </span>
+                    <span className="text-xs text-gray-500">• Resets daily at midnight UTC</span>
+                  </div>
+                </div>
+              </div>
+              
+              {isAtLimit && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-800">Daily limit reached</p>
+                      <p className="text-amber-700 mt-1">
+                        This portfolio demo limits AI recipe generation to manage API costs. 
+                        You can still use the ingredient substitution finder and meal planner!
+                      </p>
+                      <div className="mt-2 text-xs text-amber-600">
+                        <strong>Try these alternatives:</strong>
+                        <ul className="list-disc list-inside mt-1 ml-2">
+                          <li>Ingredient Substitution Finder</li>
+                          <li>Meal Planning Feature</li>
+                          <li>Come back tomorrow for more AI recipes</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid lg:grid-cols-2 gap-8 mt-8">
           <Card>
             <CardHeader>
               <CardTitle>Your Ingredients</CardTitle>
@@ -126,23 +179,46 @@ export function RecipeGenerator() {
                 ))}
               </div>
 
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <strong>Error:</strong> {error}
+                  {!error.includes('Daily limit') && (
+                    <>
+                      <br />
+                      <span className="text-xs">Make sure your backend server is running on localhost:3001</span>
+                    </>
+                  )}
+                </div>
+              )}
+
               <Button
                 onClick={generateRecipe}
-                disabled={ingredients.length < 4 || isGenerating}
+                disabled={!canGenerate || isGenerating || isAtLimit}
                 className="w-full"
               >
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating Recipe...
+                    Generating AI Recipe...
+                  </>
+                ) : isAtLimit ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    Daily Limit Reached (5/5)
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Recipe ({ingredients.length}/4+ ingredients)
+                    <Sparkles className="w-4 h-4" />
+                    Generate Recipe
                   </>
                 )}
               </Button>
+
+              {dailyUsage && !isAtLimit && ingredients.length >= 4 && (
+                <p className="text-xs text-center text-gray-500">
+                  {dailyUsage.remaining} AI generations remaining today
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -153,12 +229,14 @@ export function RecipeGenerator() {
                 <CardDescription>{generatedRecipe.description}</CardDescription>
                 <div className="flex gap-4 text-sm text-gray-500">
                   <span>⏱️ {generatedRecipe.prepTime}</span>
+                  <span>🍳 {generatedRecipe.cookTime}</span>
                   <span>👥 Serves {generatedRecipe.servings}</span>
+                  <span>📊 {generatedRecipe.difficulty}</span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="mb-2">Ingredients:</h4>
+                  <h4 className="font-semibold mb-2">Ingredients:</h4>
                   <ul className="list-disc list-inside space-y-1 text-sm">
                     {generatedRecipe.ingredients.map((ingredient, index) => (
                       <li key={index}>{ingredient}</li>
@@ -167,12 +245,28 @@ export function RecipeGenerator() {
                 </div>
 
                 <div>
-                  <h4 className="mb-2">Instructions:</h4>
+                  <h4 className="font-semibold mb-2">Instructions:</h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm">
                     {generatedRecipe.instructions.map((instruction, index) => (
                       <li key={index}>{instruction}</li>
                     ))}
                   </ol>
+                </div>
+
+                {generatedRecipe.nutritionInfo && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Nutrition (per serving):</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span>Calories: {generatedRecipe.nutritionInfo.calories}</span>
+                      <span>Protein: {generatedRecipe.nutritionInfo.protein}</span>
+                      <span>Carbs: {generatedRecipe.nutritionInfo.carbs}</span>
+                      <span>Fat: {generatedRecipe.nutritionInfo.fat}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-gray-500 border-t pt-2">
+                  Generated at: {new Date(generatedRecipe.generatedAt).toLocaleString()}
                 </div>
               </CardContent>
             </Card>
