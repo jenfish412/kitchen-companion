@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import React from "react";
 
 interface HomePageProps {
   onNavigate: (page: string) => void;

@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "./ui/button";
 import { ChefHat } from "lucide-react";
 
@@ -14,8 +15,26 @@ export function Navigation({ currentPage, onNavigate }: NavigationProps) {
     { id: "meal-planner", label: "Meal Planner" },
   ];
 
+  // Get background color based on current page
+  const getNavBackground = () => {
+    switch (currentPage) {
+      case "home":
+        return "bg-gradient-to-r from-orange-50 to-amber-50";
+      case "recipe-generator":
+        return "bg-gradient-to-r from-orange-50 to-red-50";
+      case "ingredient-substitute":
+        return "bg-gradient-to-r from-green-50 to-emerald-50";
+      case "meal-planner":
+        return "bg-gradient-to-r from-blue-50 to-indigo-50";
+      default:
+        return "bg-gradient-to-r from-orange-50 to-amber-50";
+    }
+  };
+
   return (
-    <nav className="fixed top-0 left-0 right-0 p-6 z-50">
+    <nav
+      className={`fixed top-0 left-0 right-0 p-6 z-50 ${getNavBackground()} border-b border-orange-200 shadow-sm`}
+    >
       <div className="flex justify-between items-center">
         {/* Logo */}
         <div

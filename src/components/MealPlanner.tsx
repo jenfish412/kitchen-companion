@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "./ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Plus, X, ShoppingCart, Calendar, Copy } from "lucide-react";
+import React from "react";
 
 interface Meal {
   id: string;
@@ -166,7 +167,7 @@ export function MealPlanner() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto pt-20">
+      <div className="max-w-7xl mx-auto pt-32">
         <div className="text-center mb-8">
           <h1 className="text-4xl mb-4 text-gray-900">Meal Planner</h1>
           <p className="text-lg text-gray-600">

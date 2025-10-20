@@ -44,6 +44,12 @@ export function RecipeGenerator() {
     setIngredients(ingredients.filter(i => i !== ingredient));
   };
 
+  const clearAll = () => {
+    setIngredients([]);
+    setGeneratedRecipe(null);
+    setError(null);
+  };
+
   const generateRecipe = async () => {
     setIsGenerating(true);
     setError(null);
@@ -51,7 +57,7 @@ export function RecipeGenerator() {
     try {
       console.log('🤖 Calling OpenAI API to generate recipe with ingredients:', ingredients);
       
-      const response = await apiService.testOpenAIRecipe({
+      const response = await apiService.getOpenAIRecipe({
         ingredients,
         servings: 4,
         mealType: 'any'
@@ -89,7 +95,7 @@ export function RecipeGenerator() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 p-6">
-      <div className="max-w-4xl mx-auto pt-20">
+      <div className="max-w-4xl mx-auto pt-32">
         <div className="text-center mb-8">
           <h1 className="text-4xl mb-4 text-gray-900">Recipe Generator</h1>
           <p className="text-lg text-gray-600">
@@ -117,11 +123,11 @@ export function RecipeGenerator() {
               </div>
               
               {isAtLimit && (
-                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
-                      <p className="font-medium text-amber-800">Daily limit reached</p>
+                      <p className="font-medium text-amber-800"><strong>Daily limit reached</strong></p>
                       <p className="text-amber-700 mt-1">
                         This portfolio demo limits AI recipe generation to manage API costs. 
                         You can still use the ingredient substitution finder and meal planner!
@@ -171,10 +177,18 @@ export function RecipeGenerator() {
                     className="px-3 py-1 flex items-center gap-2"
                   >
                     {ingredient}
-                    <X
-                      className="w-3 h-3 cursor-pointer hover:text-red-500"
-                      onClick={() => removeIngredient(ingredient)}
-                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeIngredient(ingredient);
+                      }}
+                      className="ml-1 hover:text-red-500 focus:outline-none focus:text-red-500 transition-colors"
+                      aria-label={`Remove ${ingredient}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </Badge>
                 ))}
               </div>
@@ -212,6 +226,14 @@ export function RecipeGenerator() {
                     Generate Recipe
                   </>
                 )}
+              </Button>
+
+              <Button
+                onClick={clearAll}
+                disabled={ingredients.length === 0}
+                className="w-full mt-2"
+              >
+                Clear All
               </Button>
 
               {dailyUsage && !isAtLimit && ingredients.length >= 4 && (

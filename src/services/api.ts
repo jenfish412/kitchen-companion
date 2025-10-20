@@ -30,15 +30,15 @@ export interface Recipe {
 
 export interface SubstitutionRequest {
   ingredient: string;
-  reason?: string;
 }
 
 export interface SubstitutionResponse {
   success: boolean;
   originalIngredient: string;
-  substitutions: string[];
-  notes: string;
-  reason: string | null;
+  substitutions: Array<{
+    substitution: string;
+    note: string;
+  }>;
   generatedAt: string;
 }
 
@@ -87,15 +87,15 @@ class ApiService {
     return this.makeRequest('/health');
   }
 
-  async generateRecipe(request: RecipeRequest): Promise<{ success: boolean; recipe: Recipe; message: string }> {
-    return this.makeRequest('/generate-recipe', {
+  async generateMockRecipe(request: RecipeRequest): Promise<{ success: boolean; recipe: Recipe; message: string }> {
+    return this.makeRequest('/generate-mock-recipe', {
       method: 'POST',
       body: JSON.stringify(request),
     });
   }
 
   async getIngredientSubstitutions(request: SubstitutionRequest): Promise<SubstitutionResponse> {
-    return this.makeRequest('/substitute-ingredient', {
+    return this.makeRequest('/get-openai-substitute', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -108,8 +108,8 @@ class ApiService {
     });
   }
 
-  async testOpenAIRecipe(request: RecipeRequest): Promise<{ success: boolean; recipe: Recipe; message: string }> {
-    return this.makeRequest('/test-openai-recipe', {
+  async getOpenAIRecipe(request: RecipeRequest): Promise<{ success: boolean; recipe: Recipe; message: string }> {
+    return this.makeRequest('/get-openai-recipe', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -117,6 +117,10 @@ class ApiService {
 
   async checkDailyUsage(): Promise<DailyUsageResponse> {
     return this.makeRequest('/daily-usage');
+  }
+
+  async checkDailySubstitutionUsage(): Promise<DailyUsageResponse> {
+    return this.makeRequest('/daily-substitution-usage');
   }
 }
 
