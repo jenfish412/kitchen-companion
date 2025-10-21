@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'kitchen-companion-production-12c7.up.railway.app';
 
 export interface RecipeRequest {
   ingredients: string[];
