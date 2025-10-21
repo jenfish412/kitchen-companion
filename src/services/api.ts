@@ -1,4 +1,4 @@
-const API_BASE_URL = 'kitchen-companion-production-12c7.up.railway.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export interface RecipeRequest {
   ingredients: string[];
