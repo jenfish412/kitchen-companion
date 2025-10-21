@@ -815,7 +815,7 @@ app.post('/api/get-openai-substitute', async (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📱 Ready to accept requests from frontend at ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`📱 Ready to accept requests from frontend at ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
   console.log('📋 Available endpoints:');
   console.log('  GET  /api/health');
   console.log('  POST /api/generate-mock-recipe');

@@ -4,6 +4,7 @@ import { HomePage } from "./components/HomePage";
 import { RecipeGenerator } from "./components/RecipeGenerator";
 import { SubstituteFinder } from "./components/SubstituteFinder";
 import { MealPlanner } from "./components/MealPlanner";
+import React from "react";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home");
